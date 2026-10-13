@@ -1,0 +1,26 @@
+{
+  "eql": {
+    "W": 900,
+    "H": 1200,
+    "bg": "#FFFFFF",
+    "scale": 1.2,
+    "fill": 95,
+    "dpi": 300,
+    "quality": 95,
+    "prefix": "EQL"
+  },
+  "musinsa": {
+    "W": 750,
+    "H": 1000,
+    "bg": "#FFFFFF",
+    "scale": 1,
+    "maxW": 690,
+    "maxH": 906,
+    "personDy": 18,
+    "stagedDy": 12,
+    "tshirtW": 615,
+    "dpi": 0,
+    "quality": 95,
+    "prefix": "무신사"
+  }
+}

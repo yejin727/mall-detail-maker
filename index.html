@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EQL·무신사 상세이미지</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: 한 열 작업대 — 몰 스위치·설정 → 넣는 곳 → 몰별 결과 그리드(3:4 썸네일) */
+/* Palette: 화이트 바탕 · 블랙 글자와 주 버튼 · 핑크는 켜짐/선택/강조에만. 다크 모드에서도 항상 화이트 */
+:root {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --fg: #0a0a0a;
+  --muted: #6b6b6b;
+  --line: #e4e4e4;
+  --accent: #f7b8cf;        /* 베이비핑크: 스위치·배지·테두리 */
+  --accent-text: #c0557d;   /* 흰 바탕 위 핑크 글자 */
+  --accent-ink: #0a0a0a;    /* 핑크 위 글자 */
+  --accent-soft: #fff1f6;
+  --btn: #0a0a0a;           /* 주 버튼 */
+  --btn-ink: #ffffff;
+  --warn: #c4261d;
+  --ok: #1f7a4a;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-inline: 16px; padding-block: 32px 64px; display: grid; gap: 24px; }
+header { display: grid; gap: 10px; }
+h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
+h1 .dot { color: var(--accent); }
+.lede { margin: 0; color: var(--muted); max-width: 62ch; }
+
+.malls { display: grid; gap: 8px; }
+.mall { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.mall-head { display: grid; grid-template-columns: auto 1fr auto; gap: 6px 14px; align-items: center; padding: 12px 14px; }
+.mall.off .mall-head > .spec { opacity: .55; }
+.switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 700; font-size: 15px; min-width: 7.5em; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch .track { position: relative; width: 38px; height: 22px; border-radius: 999px; background: var(--line); transition: background .15s; flex: none; }
+.switch .track::after { content: ""; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
+.switch input:checked + .track { background: var(--accent); }
+.switch input:checked + .track::after { transform: translateX(16px); }
+.switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+.spec { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; min-width: 0; }
+.spec li { font-family: var(--font-mono); font-size: 12.5px; padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); }
+.spec li.dirty { border-color: var(--accent); color: var(--accent-text); font-family: var(--font-body); }
+.gear { padding: 6px 12px; font-size: 13px; }
+.gear[aria-expanded="true"] { background: var(--accent-soft); border-color: var(--accent); }
+
+.settings { border-top: 1px solid var(--line); padding: 16px 14px; display: grid; gap: 14px; }
+.fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px 16px; }
+.field { display: grid; gap: 4px; min-width: 0; align-content: start; }
+.field label { font-size: 13px; color: var(--muted); }
+.field .in { display: flex; align-items: center; gap: 6px; }
+.field input { font: inherit; font-family: var(--font-mono); font-size: 14px; width: 100%; min-width: 0; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); }
+.field input.bad { border-color: var(--warn); }
+.field .unit { font-family: var(--font-mono); font-size: 12px; color: var(--muted); flex: none; }
+.field .swatch { width: 26px; height: 26px; flex: none; border-radius: 6px; border: 1px solid var(--line); }
+.field .hint { font-size: 11.5px; color: var(--muted); min-height: 1em; }
+.field input.bad ~ .hint, .field .hint.bad { color: var(--warn); }
+.settings-foot { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.settings-note { font-size: 13px; color: var(--muted); min-width: 0; flex: 1 1 260px; }
+.settings-note.dirty { color: var(--accent-text); }
+.settings-note.err { color: var(--warn); }
+.settings-note.ok { color: var(--ok); }
+
+.drop { display: grid; grid-template-columns: 120px 1fr; gap: 24px; align-items: center; padding: 24px; background: var(--surface); border: 1.5px dashed var(--line); border-radius: 14px; transition: border-color .15s, background .15s; }
+.drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.frame { position: relative; width: 120px; aspect-ratio: 3 / 4; max-width: 100%; background: #fff; border: 1px solid var(--line); border-radius: 4px; }
+.frame .item { position: absolute; left: 50%; top: 50%; width: 46%; height: 30%; transform: translate(-50%, -50%); border: 1.5px solid var(--accent); border-radius: 3px; background: repeating-linear-gradient(45deg, transparent 0 5px, rgba(247,184,207,.45) 5px 6px); }
+.frame .cap { position: absolute; left: 0; right: 0; bottom: -20px; text-align: center; font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); }
+.drop-body { display: grid; gap: 12px; min-width: 0; }
+.drop-body strong { font-size: 17px; }
+.drop-body p { margin: 0; color: var(--muted); }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+button { font: inherit; font-weight: 500; font-size: 14px; padding: 9px 16px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
+button.primary { background: var(--btn); border-color: var(--btn); color: var(--btn-ink); }
+button:disabled { opacity: .45; cursor: default; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input[type="file"] { display: none; }
+
+.bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+.bar .count { font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
+.status { min-height: 1.5em; font-size: 14px; color: var(--muted); }
+.status.err { color: var(--warn); }
+
+.group { display: grid; gap: 12px; }
+.group-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.group-head button { padding: 6px 12px; font-size: 13px; }
+.group h2 { margin: 0; font-size: 16px; font-weight: 700; display: flex; gap: 10px; align-items: baseline; }
+.group h2 span { font-family: var(--font-mono); font-size: 12.5px; font-weight: 400; color: var(--muted); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }
+.card { display: grid; gap: 8px; min-width: 0; margin: 0; align-content: start; }
+.card .thumb { position: relative; max-width: 100%; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.card .badge { position: absolute; left: 8px; top: 8px; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); }
+.card img { width: 100%; height: 100%; display: block; object-fit: contain; }
+.card .name { font-size: 12.5px; line-height: 1.4; word-break: break-all; }
+.card .meta { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.card .meta.warn { color: var(--warn); }
+.card button { padding: 5px 10px; font-size: 12.5px; justify-self: start; }
+.empty { padding: 28px; text-align: center; color: var(--muted); border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+
+@media (max-width: 560px) {
+  .mall-head { grid-template-columns: 1fr auto; }
+  .mall-head .spec { grid-column: 1 / -1; grid-row: 2; }
+  .drop { grid-template-columns: 1fr; justify-items: start; padding-block: 20px 28px; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>EQL<span class="dot">·</span>무신사 상세이미지</h1>
+    <p class="lede">누끼 PNG를 한 번 넣으면 켜 둔 몰 규격으로 한꺼번에 만들어요. 필요 없는 몰은 꺼 두고, 규격은 각 몰의 설정에서 바꿀 수 있어요. 이미지는 이 브라우저 안에서만 처리되고 어디에도 올라가지 않아요.</p>
+    <div class="malls" id="malls" aria-label="만들 몰"></div>
+  </header>
+
+  <section class="drop" id="drop" aria-label="누끼 넣기">
+    <div class="frame" aria-hidden="true"><div class="item"></div><div class="cap">3 : 4</div></div>
+    <div class="drop-body">
+      <strong>누끼 PNG나 폴더를 여기로 끌어다 놓으세요</strong>
+      <p>한 상품 전체, 여러 상품을 한 번에 넣어도 됩니다. 파일명 예: 누끼_Jihoo-7,-Child_앞.png</p>
+      <div class="row">
+        <button class="primary" id="pickFiles" type="button">파일 선택</button>
+        <button id="pickDir" type="button">폴더 선택</button>
+      </div>
+      <input type="file" id="files" accept="image/png" multiple>
+      <input type="file" id="dir" webkitdirectory multiple>
+    </div>
+  </section>
+
+  <section aria-label="결과" style="display:grid;gap:14px">
+    <div class="bar">
+      <span class="count" id="count">0장</span>
+      <div class="row">
+        <button id="clear" type="button" disabled>비우기</button>
+        <button class="primary" id="saveZip" type="button" disabled>켜진 몰 전체 ZIP 저장</button>
+      </div>
+    </div>
+    <div class="status" id="status" role="status"></div>
+    <div id="results" style="display:grid;gap:28px"></div>
+    <div class="empty" id="empty">아직 만든 이미지가 없어요. 위에 누끼를 넣으면 여기에 결과가 나타납니다.</div>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+/* ── 몰별 처음값 ───────────────────────────────────────────
+   EQL   : EQL 15_Lovesick 실측. 누끼 ×1.2 → 900×1200 흰 배경 정중앙, 300dpi
+   무신사 : 무신사 61개 상품·380장 실측 (tools/musinsa.py 와 동일)
+            누끼 1:1 → 750×1000 흰 배경 정중앙. 사람 키링의 앞/옆/뒤/밑 +18px, 연출 +12px 아래
+            티셔츠는 옷 폭 615px. 캔버스보다 큰 누끼는 690×906 안으로 축소
+   팀 기본값은 db 의 settings/<몰> 문서에 저장되고, 없으면 처음값을 쓴다.                    */
+const FIELDS = {
+  eql: [
+    { key: "W", label: "가로", unit: "px", type: "int", min: 100, max: 6000 },
+    { key: "H", label: "세로", unit: "px", type: "int", min: 100, max: 6000 },
+    { key: "bg", label: "배경 컬러", type: "color" },
+    { key: "scale", label: "누끼 배율", unit: "배", type: "num", min: 0.05, max: 10 },
+    { key: "fill", label: "최대 차지 비율", unit: "%", type: "num", min: 10, max: 100, hint: "상품이 캔버스의 이 비율을 넘으면 줄임" },
+    { key: "dpi", label: "해상도", unit: "dpi", type: "int", min: 0, max: 2400, hint: "0이면 지정 안 함" },
+    { key: "quality", label: "JPG 품질", unit: "%", type: "int", min: 50, max: 100 },
+    { key: "prefix", label: "파일명 앞머리", type: "text", hint: "EQL_상세이미지_… · ZIP 이름에도 쓰임" },
+  ],
+  musinsa: [
+    { key: "W", label: "가로", unit: "px", type: "int", min: 100, max: 6000 },
+    { key: "H", label: "세로", unit: "px", type: "int", min: 100, max: 6000 },
+    { key: "bg", label: "배경 컬러", type: "color" },
+    { key: "scale", label: "누끼 배율", unit: "배", type: "num", min: 0.05, max: 10 },
+    { key: "maxW", label: "최대 상품 가로", unit: "px", type: "int", min: 10, max: 6000, hint: "넘으면 이 박스 안으로 줄임" },
+    { key: "maxH", label: "최대 상품 세로", unit: "px", type: "int", min: 10, max: 6000 },
+    { key: "personDy", label: "사람 키링 앞/옆/뒤/밑 아래로", unit: "px", type: "int", min: -500, max: 500 },
+    { key: "stagedDy", label: "사람 키링 연출 아래로", unit: "px", type: "int", min: -500, max: 500 },
+    { key: "tshirtW", label: "티셔츠 옷 폭", unit: "px", type: "int", min: 10, max: 6000 },
+    { key: "dpi", label: "해상도", unit: "dpi", type: "int", min: 0, max: 2400, hint: "0이면 지정 안 함" },
+    { key: "quality", label: "JPG 품질", unit: "%", type: "int", min: 50, max: 100 },
+    { key: "prefix", label: "파일명 앞머리", type: "text", hint: "무신사_상품명_01_… · ZIP 이름에도 쓰임" },
+  ],
+};
+const FACTORY = {
+  eql: { W: 900, H: 1200, bg: "#FFFFFF", scale: 1.2, fill: 95, dpi: 300, quality: 95, prefix: "EQL" },
+  musinsa: { W: 750, H: 1000, bg: "#FFFFFF", scale: 1, maxW: 690, maxH: 906, personDy: 18, stagedDy: 12, tshirtW: 615, dpi: 0, quality: 95, prefix: "무신사" },
+};
+const MODES = {
+  eql: {
+    label: "EQL", build: l => buildEql(l), folder: s => `${safe(s.prefix) || "EQL"} 상세이미지`,
+    spec: s => [`누끼 × ${s.scale}`, `${s.W} × ${s.H} px`, `배경 ${s.bg}`, s.dpi ? `${s.dpi} dpi` : "dpi 미지정", `앞머리 ${s.prefix}`],
+  },
+  musinsa: {
+    label: "무신사", build: l => buildMusinsa(l), folder: s => `${safe(s.prefix) || "무신사"} 상세이미지`,
+    spec: s => [s.scale === 1 ? "누끼 1:1" : `누끼 × ${s.scale}`, `${s.W} × ${s.H} px`, `배경 ${s.bg}`, s.dpi ? `${s.dpi} dpi` : "dpi 미지정", "썸네일 = 블리스터_앞", `사람 키링 +${s.personDy}px`, `앞머리 ${s.prefix}`],
+  },
+};
+const ORDER = ["블리스터_앞", "키링", "앞", "옆", "뒤", "밑", "아래", "연출", "블리스터_뒤"];
+const LS = { malls: "malls", settings: k => `settings:${k}` };
+
+const $ = id => document.getElementById(id);
+const safe = s => String(s || "").trim().replace(/[\\/:*?"<>|]/g, "");
+const clone = o => JSON.parse(JSON.stringify(o));
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+const sources = new Map();   // 파일명 → 분석된 누끼 {file, bmp, w, h, box}
+const results = {};          // 몰 → 결과 배열 (꺼도 남겨 두었다가 다시 켜면 바로 보여줌)
+const enabled = { eql: true, musinsa: true };
+const saved = { eql: clone(FACTORY.eql), musinsa: clone(FACTORY.musinsa) };  // 기본값 (팀 또는 이 브라우저)
+const draft = { eql: clone(FACTORY.eql), musinsa: clone(FACTORY.musinsa) };  // 지금 쓰는 값
+const savedAt = { eql: null, musinsa: null };
+const expanded = { eql: false, musinsa: false };
+const note = { eql: null, musinsa: null };
+const downloads = true, canWrite = null, store = "local";
+const TEAM = clone(FACTORY);
+const local = {};
+let job = 0;
+
+try { const s = JSON.parse(localStorage.getItem(LS.malls) || "null"); if (s) for (const k in enabled) if (k in s) enabled[k] = !!s[k]; } catch {}
+for (const k in FACTORY) {
+  try {
+    const s = JSON.parse(localStorage.getItem(LS.settings(k)) || "null");
+    if (s?.values) { saved[k] = { ...FACTORY[k], ...s.values }; draft[k] = clone(saved[k]); savedAt[k] = s.updatedAt || null; local[k] = true; }
+  } catch {}
+}
+
+/* ── 팀 기본값: 같은 주소의 defaults.json (못 읽으면 처음값) ──
+   각자 [기본값으로 저장]한 값은 그 브라우저에만 남고 팀 기본값보다 먼저 쓰인다. */
+(async () => {
+  try {
+    const r = await fetch("defaults.json", { cache: "no-cache" });
+    if (!r.ok) return;
+    const team = await r.json();
+    for (const k in FACTORY) {
+      if (!team[k]) continue;
+      TEAM[k] = { ...FACTORY[k], ...team[k] };
+      if (local[k]) continue;
+      const wasClean = same(draft[k], saved[k]);
+      saved[k] = clone(TEAM[k]);
+      if (wasClean && !same(draft[k], saved[k])) { draft[k] = clone(saved[k]); rebuild([k]); }
+    }
+    renderMalls();
+  } catch {}
+})();
+
+/* ── 파일명 ── */
+function stemOf(file) {
+  let n = file.normalize("NFC").replace(/\.[^.]+$/, "");
+  if (n.startsWith("누끼_")) n = n.slice(3);
+  return n.replace(/블리스터-(앞|뒤)/, "블리스터_$1");
+}
+function parse(file) { // 'Jihoo-7,-Child_블리스터_앞' → {name:'Jihoo 7, Child', cut:'블리스터_앞'}
+  const stem = stemOf(file);
+  const cut = [...ORDER].sort((a, b) => b.length - a.length).find(c => stem.endsWith("_" + c)) || "";
+  const raw = cut ? stem.slice(0, -cut.length - 1) : stem;
+  const name = raw.replace(/,-/g, ", ").replace(/--/g, " ").replace(/-/g, " ").trim();
+  return { name, cut, stem };
+}
+
+/* ── JFIF APP0 해상도 기록 (없으면 삽입) ── */
+function withDpi(buf, dpi) {
+  const b = new Uint8Array(buf);
+  if (!dpi) return b;
+  const isJfif = b[2] === 0xFF && b[3] === 0xE0 && b[6] === 0x4A && b[7] === 0x46 && b[8] === 0x49 && b[9] === 0x46;
+  if (isJfif) { b[13] = 1; b[14] = dpi >> 8; b[15] = dpi & 255; b[16] = dpi >> 8; b[17] = dpi & 255; return b; }
+  const app0 = [0xFF,0xE0,0,16,0x4A,0x46,0x49,0x46,0,1,1,1,dpi>>8,dpi&255,dpi>>8,dpi&255,0,0];
+  const out = new Uint8Array(b.length + app0.length);
+  out.set(b.subarray(0, 2)); out.set(app0, 2); out.set(b.subarray(2), 2 + app0.length);
+  return out;
+}
+
+/* ── 누끼 한 장 분석: 알파 기준 상품 영역 ── */
+async function analyze(file) {
+  const bmp = await createImageBitmap(file);
+  const c = new OffscreenCanvas(bmp.width, bmp.height);
+  const cx = c.getContext("2d");
+  cx.drawImage(bmp, 0, 0);
+  const d = cx.getImageData(0, 0, bmp.width, bmp.height).data;
+  let x0 = bmp.width, y0 = bmp.height, x1 = -1, y1 = -1;
+  for (let y = 0; y < bmp.height; y++) {
+    const row = y * bmp.width * 4;
+    for (let x = 0; x < bmp.width; x++) {
+      if (d[row + x * 4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+  }
+  if (x1 < 0) throw new Error("empty");
+  return { file, bmp, w: bmp.width, h: bmp.height, box: [x0, y0, x1 - x0 + 1, y1 - y0 + 1] };
+}
+
+/* ── 캔버스에 배치 → JPG ── */
+async function place(src, f, s, dy) {
+  const [x0, y0, sw, sh] = src.box;
+  const dw = Math.max(1, Math.round(sw * f)), dh = Math.max(1, Math.round(sh * f));
+  const out = document.createElement("canvas");
+  out.width = s.W; out.height = s.H;
+  const o = out.getContext("2d");
+  o.fillStyle = s.bg; o.fillRect(0, 0, s.W, s.H);
+  o.imageSmoothingEnabled = true; o.imageSmoothingQuality = "high";
+  const dx = Math.floor((s.W - dw) / 2), top = Math.floor((s.H - dh) / 2) + dy;
+  if (f === 1) o.drawImage(src.bmp, x0, y0, sw, sh, dx, top, sw, sh);
+  else {
+    let scaled = null;
+    try { scaled = await createImageBitmap(src.bmp, x0, y0, sw, sh, { resizeWidth: dw, resizeHeight: dh, resizeQuality: "high" }); } catch {}
+    if (scaled) o.drawImage(scaled, dx, top); else o.drawImage(src.bmp, x0, y0, sw, sh, dx, top, dw, dh);
+  }
+  const jpg = await new Promise(r => out.toBlob(r, "image/jpeg", s.quality / 100));
+  const blob = new Blob([withDpi(await jpg.arrayBuffer(), s.dpi)], { type: "image/jpeg" });
+  return { blob, url: URL.createObjectURL(blob), out: [dw, dh], W: s.W, H: s.H };
+}
+
+/* ── EQL ── */
+async function buildEql(list) {
+  const s = clone(draft.eql), res = [], fill = s.fill / 100;
+  const pre = safe(s.prefix) || "EQL";
+  for (const src of list) {
+    const [, , sw, sh] = src.box;
+    const f = Math.min(s.scale, fill * s.W / sw, fill * s.H / sh);
+    const { name, cut, stem } = parse(src.file.name);
+    const label = cut ? `${name}_${cut}` : stem;
+    res.push({ name: `${pre}_상세이미지_${label}.jpg`, src: [sw, sh], ...(await place(src, f, s, 0)) });
+  }
+  return res;
+}
+
+/* ── 무신사 ── */
+function isPerson(group) { // 블리스터 소(폭 ≤ 450)를 쓰면 사람 키링
+  const bl = group.find(s => s.cut.startsWith("블리스터"));
+  if (bl) return bl.w <= 450;
+  return group.some(s => s.cut === "앞" && s.h >= 700);
+}
+async function buildMusinsa(list) {
+  const s = clone(draft.musinsa), res = [];
+  const pre = safe(s.prefix) || "무신사";
+  const rank = Object.fromEntries(ORDER.map((c, i) => [c, i]));
+  const dyOf = { "앞": s.personDy, "옆": s.personDy, "뒤": s.personDy, "밑": s.personDy, "아래": s.personDy, "연출": s.stagedDy };
+  const items = list.map(x => ({ ...x, ...parse(x.file.name) }))
+    .sort((a, b) => a.name.localeCompare(b.name, "ko") || (rank[a.cut] ?? 99) - (rank[b.cut] ?? 99));
+  const groups = {};
+  items.forEach(x => (groups[x.name] ||= []).push(x));
+  for (const [name, group] of Object.entries(groups)) {
+    const person = isPerson(group);
+    let seq = 0;
+    for (const x of group) {
+      seq++;
+      const [, , sw, sh] = x.box;
+      const shirt = /T-shirt|티셔츠/i.test(x.file.name);
+      let f = s.scale, warn = "";
+      if (shirt) f = s.tshirtW / sw;
+      else if (sw * f > s.maxW || sh * f > s.maxH) { f = Math.min(s.maxW / sw, s.maxH / sh); warn = `기준보다 커서 ${f.toFixed(3)}배로 줄임`; }
+      const dy = person ? (dyOf[x.cut] || 0) : 0;
+      const label = x.cut || x.stem;
+      const tag = x.cut === "블리스터_앞" ? "_썸네일" : "";
+      res.push({
+        name: `${pre}_${name}_${String(seq).padStart(2, "0")}_${label}${tag}.jpg`,
+        src: [sw, sh], warn, thumb: !!tag, ...(await place(x, f, s, dy)),
+      });
+    }
+  }
+  return res;
+}
+
+/* ── 흐름 ── */
+const active = () => Object.keys(MODES).filter(k => enabled[k]);
+const shown = () => active().flatMap(k => results[k] || []);
+function discard(k) { (results[k] || []).forEach(r => URL.revokeObjectURL(r.url)); delete results[k]; }
+
+async function addFiles(files) {
+  const pngs = files.filter(f => /\.png$/i.test(f.name) && !f.name.startsWith("."));
+  if (!pngs.length) { setStatus("PNG 누끼 파일이 없어요. 배경이 투명한 PNG를 넣어주세요.", true); return; }
+  let fail = 0;
+  for (let i = 0; i < pngs.length; i++) {
+    setStatus(`누끼 읽는 중… ${i + 1} / ${pngs.length}`);
+    try { sources.set(pngs[i].name.normalize("NFC"), await analyze(pngs[i])); }
+    catch { fail++; }
+  }
+  await rebuild(Object.keys(MODES));
+  if (fail) setStatus(`${fail}장은 읽지 못했어요. 배경이 투명한 PNG인지 확인해 주세요.`, true);
+}
+
+// keys: 다시 만들 몰 (없으면 켜진 몰 중 결과가 없는 것만)
+async function rebuild(keys) {
+  const my = ++job;
+  if (keys) keys.forEach(discard);
+  render();
+  if (!sources.size) return;
+  const todo = active().filter(k => !results[k]);
+  if (!todo.length) { setStatus(active().length ? "" : "만들 몰을 하나 이상 켜 주세요.", !active().length); return; }
+  const list = [...sources.values()].sort((a, b) => a.file.name.localeCompare(b.file.name, "ko"));
+  for (const k of todo) {
+    setStatus(`${MODES[k].label} 규격으로 만드는 중…`);
+    const out = await MODES[k].build(list);
+    if (my !== job) { out.forEach(r => URL.revokeObjectURL(r.url)); return; }
+    results[k] = out;
+    render();
+  }
+  setStatus(active().map(k => `${MODES[k].label} ${results[k].length}장`).join(" · ") + " 완료.");
+}
+
+function setStatus(msg, err = false) { const s = $("status"); s.textContent = msg; s.classList.toggle("err", err); }
+
+/* ── 설정 ── */
+function validate(fd, raw) {
+  const t = String(raw).trim();
+  if (fd.type === "color") {
+    const m = t.match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (!m) return { err: "#FFFFFF 형식으로 입력" };
+    let h = m[1].toUpperCase(); if (h.length === 3) h = h.split("").map(c => c + c).join("");
+    return { value: "#" + h };
+  }
+  if (fd.type === "text") return t ? { value: t } : { err: "비워 둘 수 없어요" };
+  const n = Number(t);
+  if (t === "" || !isFinite(n)) return { err: "숫자를 입력" };
+  if (fd.type === "int" && !Number.isInteger(n)) return { err: "정수를 입력" };
+  if (n < fd.min || n > fd.max) return { err: `${fd.min}~${fd.max} 사이로 입력` };
+  return { value: n };
+}
+
+const timers = {};
+function onField(k, fd, input, hint) {
+  const r = validate(fd, input.value);
+  input.classList.toggle("bad", !!r.err);
+  hint.textContent = r.err || fd.hint || "";
+  if (r.err) return;
+  if (fd.type === "color") input.parentElement.querySelector(".swatch").style.background = r.value;
+  draft[k][fd.key] = r.value;
+  note[k] = null;
+  updateMallHead(k);
+  clearTimeout(timers[k]);
+  timers[k] = setTimeout(() => rebuild([k]), 350);
+}
+
+async function saveDefaults(k) {
+  const values = clone(draft[k]);
+  const updatedAt = new Date().toISOString();
+  {
+    try { localStorage.setItem(LS.settings(k), JSON.stringify({ values, updatedAt })); }
+    catch { note[k] = { text: "이 브라우저에 저장하지 못했어요.", cls: "err" }; renderMalls(); return; }
+  }
+  saved[k] = values; savedAt[k] = updatedAt; local[k] = true;
+  note[k] = { text: "이 브라우저의 기본값으로 저장했어요. 다른 사람에게는 적용되지 않아요.", cls: "ok" };
+  renderMalls();
+}
+
+function fmtTime(iso) {
+  if (!iso) return "";
+  const d = new Date(iso); if (isNaN(d)) return "";
+  const p = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function specList(k) {
+  const ul = document.createElement("ul"); ul.className = "spec";
+  MODES[k].spec(draft[k]).forEach(t => { const li = document.createElement("li"); li.textContent = t; ul.append(li); });
+  if (!same(draft[k], saved[k])) { const li = document.createElement("li"); li.className = "dirty"; li.textContent = "저장 안 한 변경"; ul.append(li); }
+  return ul;
+}
+function setNote(k, el) {
+  const dirty = !same(draft[k], saved[k]);
+  let text, cls = "";
+  if (note[k]) ({ text, cls } = note[k]);
+  else if (canWrite === false && store === "team") text = dirty ? "보기 권한이라 바꾼 값은 지금만 쓰이고 저장되지 않아요." : "팀 기본값 · 보기 권한이라 저장은 할 수 없어요.";
+  else if (dirty) { text = "바꾼 값이 결과에 바로 적용됐어요. 다음에도 쓰려면 기본값으로 저장하세요."; cls = "dirty"; }
+  else {
+    const who = local[k] ? "이 브라우저 기본값" : "팀 기본값";
+    const at = fmtTime(savedAt[k]);
+    text = at ? `${who} · 마지막 저장 ${at}` : `${who} · 처음값 그대로`;
+  }
+  el.textContent = text; el.className = "settings-note" + (cls ? " " + cls : "");
+}
+function updateMallHead(k) {
+  const root = $(`mall-${k}`); if (!root) return;
+  root.querySelector(".mall-head .spec").replaceWith(specList(k));
+  const n = root.querySelector(".settings-note"); if (n) setNote(k, n);
+  const dirty = !same(draft[k], saved[k]);
+  const sv = root.querySelector(".save-defaults"); if (sv) sv.disabled = !dirty || canWrite === false;
+  const rv = root.querySelector(".revert"); if (rv) rv.disabled = !dirty;
+}
+
+function renderMalls() {
+  const box = $("malls"); box.textContent = "";
+  for (const [k, M] of Object.entries(MODES)) {
+    const wrap = document.createElement("div"); wrap.className = "mall" + (enabled[k] ? "" : " off"); wrap.id = `mall-${k}`;
+    const head = document.createElement("div"); head.className = "mall-head";
+    const lab = document.createElement("label"); lab.className = "switch";
+    const cb = document.createElement("input"); cb.type = "checkbox"; cb.id = `on-${k}`; cb.setAttribute("role", "switch"); cb.checked = enabled[k];
+    cb.onchange = () => toggle(k, cb.checked);
+    const tr = document.createElement("span"); tr.className = "track";
+    const nm = document.createElement("span"); nm.textContent = M.label;
+    lab.append(cb, tr, nm);
+    const gear = document.createElement("button"); gear.type = "button"; gear.className = "gear"; gear.textContent = "설정";
+    gear.setAttribute("aria-expanded", expanded[k]); gear.setAttribute("aria-controls", `set-${k}`);
+    gear.onclick = () => { expanded[k] = !expanded[k]; renderMalls(); };
+    head.append(lab, specList(k), gear);
+    wrap.append(head);
+
+    if (expanded[k]) {
+      const dirty = !same(draft[k], saved[k]);
+      const panel = document.createElement("div"); panel.className = "settings"; panel.id = `set-${k}`;
+      const fields = document.createElement("div"); fields.className = "fields";
+      for (const fd of FIELDS[k]) {
+        const f = document.createElement("div"); f.className = "field";
+        const id = `f-${k}-${fd.key}`;
+        const l = document.createElement("label"); l.htmlFor = id; l.textContent = fd.label;
+        const row = document.createElement("div"); row.className = "in";
+        if (fd.type === "color") { const sw = document.createElement("span"); sw.className = "swatch"; sw.style.background = draft[k][fd.key]; row.append(sw); }
+        const input = document.createElement("input"); input.type = "text"; input.id = id; input.value = draft[k][fd.key];
+        input.inputMode = fd.type === "int" || fd.type === "num" ? "decimal" : "text"; input.autocomplete = "off"; input.spellcheck = false;
+        row.append(input);
+        if (fd.unit) { const u = document.createElement("span"); u.className = "unit"; u.textContent = fd.unit; row.append(u); }
+        const hint = document.createElement("div"); hint.className = "hint"; hint.textContent = fd.hint || "";
+        input.addEventListener("input", () => { onField(k, fd, input, hint); hint.classList.toggle("bad", input.classList.contains("bad")); });
+        f.append(l, row, hint);
+        fields.append(f);
+      }
+      const foot = document.createElement("div"); foot.className = "settings-foot";
+      const n = document.createElement("div"); setNote(k, n);
+      const btns = document.createElement("div"); btns.className = "row";
+      const reset = document.createElement("button"); reset.type = "button"; reset.textContent = "팀 기본값으로";
+      reset.title = "팀 기본값(defaults.json)으로 칸을 되돌려요. 저장은 따로 눌러야 해요.";
+      reset.onclick = () => { draft[k] = clone(TEAM[k]); note[k] = null; renderMalls(); rebuild([k]); };
+      const revert = document.createElement("button"); revert.type = "button"; revert.className = "revert"; revert.textContent = "변경 취소";
+      revert.disabled = !dirty;
+      revert.onclick = () => { draft[k] = clone(saved[k]); note[k] = null; renderMalls(); rebuild([k]); };
+      const sv = document.createElement("button"); sv.type = "button"; sv.className = "primary save-defaults"; sv.textContent = "기본값으로 저장";
+      sv.disabled = !dirty || canWrite === false;
+      sv.onclick = () => saveDefaults(k);
+      btns.append(reset, revert, sv);
+      foot.append(n, btns);
+      panel.append(fields, foot);
+      wrap.append(panel);
+    }
+    box.append(wrap);
+  }
+}
+
+function toggle(k, on) {
+  enabled[k] = on;
+  try { localStorage.setItem(LS.malls, JSON.stringify(enabled)); } catch {}
+  $(`mall-${k}`).classList.toggle("off", !on);
+  rebuild();
+}
+
+/* ── 결과 ── */
+function card(r) {
+  const card = document.createElement("figure"); card.className = "card";
+  const t = document.createElement("div"); t.className = "thumb"; t.style.aspectRatio = `${r.W} / ${r.H}`;
+  const img = document.createElement("img"); img.src = r.url; img.alt = r.name; t.append(img);
+  if (r.thumb) { const b = document.createElement("span"); b.className = "badge"; b.textContent = "대표 썸네일"; t.append(b); }
+  const n = document.createElement("figcaption"); n.className = "name"; n.textContent = r.name;
+  const m = document.createElement("div"); m.className = "meta" + (r.warn ? " warn" : "");
+  m.textContent = r.warn ? `${r.src[0]}×${r.src[1]} · ${r.warn}` : `${r.src[0]}×${r.src[1]} → ${r.out[0]}×${r.out[1]}`;
+  card.append(t, n, m);
+  if (downloads) {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = "이 장만 저장";
+    b.onclick = () => save(r.name, r.blob);
+    card.append(b);
+  }
+  return card;
+}
+
+function render() {
+  const box = $("results"); box.textContent = "";
+  for (const k of active()) {
+    const list = results[k];
+    if (!list || !list.length) continue;
+    const sec = document.createElement("section"); sec.className = "group";
+    const h = document.createElement("h2"); h.textContent = MODES[k].label;
+    const sub = document.createElement("span"); sub.textContent = `${list[0].W}×${list[0].H} · ${list.length}장`; h.append(sub);
+    const top = document.createElement("div"); top.className = "group-head";
+    top.append(h);
+    if (downloads) {
+      const zb = document.createElement("button"); zb.type = "button"; zb.textContent = `${MODES[k].label} ZIP 저장`;
+      zb.onclick = () => saveZip([k]);
+      top.append(zb);
+    }
+    const g = document.createElement("div"); g.className = "grid";
+    list.forEach(r => g.append(card(r)));
+    sec.append(top, g);
+    box.append(sec);
+  }
+  const all = shown();
+  $("count").textContent = `${all.length}장`;
+  $("empty").hidden = all.length > 0;
+  $("clear").disabled = !sources.size;
+  $("saveZip").disabled = !all.length || !downloads;
+  if (all.length && !downloads) setStatus("이 화면에서는 저장을 쓸 수 없어요. claude.ai에서 링크를 열어주세요.", true);
+}
+
+function save(filename, data) {
+  const url = URL.createObjectURL(data);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  setStatus(`저장했어요: ${filename}`);
+}
+
+// 몰 하나 → 그 몰 이름의 ZIP. 여러 몰 → ZIP 하나 안에 몰별 폴더
+async function saveZip(keys) {
+  keys = keys.filter(k => results[k]?.length);
+  if (!keys.length) return;
+  setStatus("ZIP으로 묶는 중…");
+  const zip = new JSZip();
+  for (const k of keys) {
+    const dir = keys.length > 1 ? zip.folder(MODES[k].folder(draft[k])) : zip;
+    results[k].forEach(r => dir.file(r.name, r.blob));
+  }
+  const name = keys.length > 1 ? `${keys.map(k => safe(draft[k].prefix) || MODES[k].label).join("·")} 상세이미지.zip` : `${MODES[keys[0]].folder(draft[keys[0]])}.zip`;
+  save(name, await zip.generateAsync({ type: "blob" }));
+}
+$("saveZip").onclick = () => saveZip(active());
+$("clear").onclick = () => { sources.clear(); setStatus(""); rebuild(Object.keys(MODES)); };
+$("pickFiles").onclick = () => $("files").click();
+$("pickDir").onclick = () => $("dir").click();
+$("files").onchange = e => { addFiles([...e.target.files]); e.target.value = ""; };
+$("dir").onchange = e => { addFiles([...e.target.files]); e.target.value = ""; };
+
+// 끌어다 놓기 (폴더 포함)
+const drop = $("drop");
+["dragenter", "dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", async e => {
+  const entries = [...(e.dataTransfer.items || [])].map(i => i.webkitGetAsEntry?.()).filter(Boolean);
+  if (!entries.length) return addFiles([...e.dataTransfer.files]);
+  const files = [];
+  const walk = entry => new Promise(res => {
+    if (entry.isFile) entry.file(f => { files.push(f); res(); }, () => res());
+    else if (entry.isDirectory) {
+      const reader = entry.createReader(); const all = [];
+      const next = () => reader.readEntries(async batch => {
+        if (!batch.length) { await Promise.all(all.map(walk)); res(); }
+        else { all.push(...batch); next(); }
+      }, () => res());
+      next();
+    } else res();
+  });
+  await Promise.all(entries.map(walk));
+  addFiles(files);
+});
+
+renderMalls();
+render();
+</script>
+
+</body>
+</html>
